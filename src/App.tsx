@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.scss';
 import { peopleFromServer } from './data/people';
 import { Person } from './types/Person';
@@ -6,27 +6,67 @@ import debounce from 'lodash.debounce';
 
 type Props = {
   debounceDelay?: number;
+  onPersonSelected?: (person: Person) => void;
 };
 
-export const App: React.FC<Props> = ({ debounceDelay = 300 }) => {
+export const App: React.FC<Props> = ({
+  debounceDelay = 300,
+  onPersonSelected,
+}) => {
   const [selectedItem, setSelectedItem] = useState<Person | null>();
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [query, setQuery] = useState(selectedItem?.name || '');
   const [appliedQuery, setAppliedQuery] = useState('');
 
-  const applyQuery = useCallback(debounce(setAppliedQuery, debounceDelay), []);
+  const debouncedApply = useMemo(() => {
+    let lastValue = '';
+
+    return debounce((value: string) => {
+      if (value !== lastValue) {
+        setAppliedQuery(value);
+        lastValue = value;
+      }
+    }, debounceDelay);
+  }, [debounceDelay]);
+
+  useEffect(() => {
+    return () => {
+      debouncedApply.cancel();
+    };
+  }, [debouncedApply]);
 
   const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
-    applyQuery(event.target.value);
+
+    if (event.target.value !== appliedQuery) {
+      debouncedApply(event.target.value);
+    }
+
     setSelectedItem(null);
   };
 
+  const handlePersonSelected = useCallback(
+    (person: Person) => {
+      setSelectedItem(person);
+      setQuery(person.name);
+      setAppliedQuery(person.name);
+      setIsInputFocused(false);
+      if (typeof onPersonSelected === 'function') {
+        onPersonSelected(person);
+      }
+    },
+    [onPersonSelected],
+  );
+
   const filteredPeople = useMemo(() => {
+    if (isInputFocused && appliedQuery.trim() === '') {
+      return peopleFromServer;
+    }
+
     return peopleFromServer.filter(person =>
-      person.name.toLowerCase().includes(appliedQuery.toLowerCase()),
+      person.name.toLowerCase().includes(appliedQuery.trim().toLowerCase()),
     );
-  }, [appliedQuery]);
+  }, [appliedQuery, isInputFocused]);
 
   return (
     <div className="container">
@@ -70,15 +110,11 @@ export const App: React.FC<Props> = ({ debounceDelay = 300 }) => {
                   <div
                     className="dropdown-item"
                     data-cy="suggestion-item"
-                    key={person.name}
+                    key={person.slug}
                   >
                     <p
                       className="has-text-link"
-                      onMouseDown={() => {
-                        setSelectedItem(person);
-                        setQuery(person.name);
-                        setIsInputFocused(false);
-                      }}
+                      onMouseDown={() => handlePersonSelected(person)}
                     >
                       {person.name}
                     </p>
