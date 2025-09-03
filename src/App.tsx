@@ -23,10 +23,8 @@ export const App: React.FC<Props> = ({ debounceDelay = 300, onSelected }) => {
   const [appliedQuery, setAppliedQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Use ref for last applied value to persist across renders
   const lastAppliedValueRef = useRef<string>('');
 
-  // Filtering logic
   const filteredPeople = useMemo(() => {
     const trimmed = appliedQuery.trim();
 
@@ -39,7 +37,6 @@ export const App: React.FC<Props> = ({ debounceDelay = 300, onSelected }) => {
     );
   }, [appliedQuery, isInputFocused]);
 
-  // Debounced filter function
   const debouncedApply = useMemo(() => {
     return debounce((value: string) => {
       if (lastAppliedValueRef.current !== value) {
@@ -55,19 +52,16 @@ export const App: React.FC<Props> = ({ debounceDelay = 300, onSelected }) => {
     };
   }, [debouncedApply]);
 
-  // Input change handler
   const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const next = event.target.value;
     const trimmed = next.trim();
 
     setQuery(next);
 
-    // Only clear selection if input does not match selected person's name
     if (selectedItem && selectedItem.name.trim() !== trimmed) {
       setSelectedItem(null);
     }
 
-    // If input is empty, show all people and close dropdown if not focused
     if (trimmed === '') {
       setAppliedQuery('');
       setIsDropdownOpen(isInputFocused);
@@ -79,7 +73,6 @@ export const App: React.FC<Props> = ({ debounceDelay = 300, onSelected }) => {
     setIsDropdownOpen(true);
   };
 
-  // Focus/blur handlers
   const handleFocus = () => {
     setIsInputFocused(true);
     setIsDropdownOpen(true);
@@ -93,7 +86,6 @@ export const App: React.FC<Props> = ({ debounceDelay = 300, onSelected }) => {
     setIsDropdownOpen(false);
   };
 
-  // Suggestion select handler
   const handlePersonSelected = useCallback(
     (person: Person) => {
       setSelectedItem(person);
@@ -108,7 +100,6 @@ export const App: React.FC<Props> = ({ debounceDelay = 300, onSelected }) => {
     [onSelected],
   );
 
-  // Dropdown open logic
   const isOpen = isInputFocused && isDropdownOpen;
 
   return (
